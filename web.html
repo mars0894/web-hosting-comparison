@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Исследование веб-хостинга: Экономия и Решения</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Warm Neutrals with Slate Blue & Emerald Accents -->
+    <!-- Application Structure Plan: Dashboard-style layout with thematic sections. Section 1 introduces the 3 simplified hosting categories (Shared, Cloud, University Server) via interactive cards. Section 2 provides a direct cost comparison using a Bar Chart. Section 3 uses a dynamic Doughnut chart to explain cost breakdowns, allowing users to toggle between typical cloud providers and the Ala-Too server to visually understand the savings. Section 4 provides actionable text-based tips for saving money. This structure logically guides the user from understanding the options to comparing costs, analyzing the components of those costs, and learning how to minimize them. -->
+    <!-- Visualization & Content Choices: 
+         1. Cost Comparison -> Goal: Compare -> Bar Chart (Chart.js) -> Hover interaction -> Clear visual difference in monthly costs.
+         2. Cost Breakdown -> Goal: Inform/Change -> Doughnut Chart (Chart.js) -> Toggle interaction (Cloud vs Ala-Too) -> Shows exactly *why* Ala-Too is cheaper (hardware/margin costs drop to zero).
+         3. Category Details -> Goal: Inform -> Interactive Cards (HTML/JS) -> Click to reveal details -> Keeps UI clean while providing deep dives into the 3 topics.
+         NO SVG/Mermaid used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+            padding: 1rem;
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        @media (max-width: 640px) {
+            .chart-container {
+                height: 250px;
+            }
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .tab-btn.active {
+            background-color: #0ea5e9;
+            color: white;
+            border-color: #0ea5e9;
+        }
+        .card-active {
+            ring-2: ring-blue-500;
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-blue-200">
+
+    <header class="bg-slate-900 text-white py-12 px-4 shadow-md">
+        <div class="max-w-6xl mx-auto text-center">
+            <h1 class="text-4xl font-bold mb-4">Оптимизация затрат на веб-хостинг</h1>
+            <p class="text-lg text-slate-300 max-w-2xl mx-auto">Исследование 3-х главных подходов к развертыванию веб-проектов. Узнайте, из чего складывается цена, как сэкономить на облачных сервисах и почему сервер университета Ала-Тоо — ваш лучший выбор.</p>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8 space-y-12">
+
+        <section id="categories">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2">1. Три основных подхода к хостингу</h2>
+                <p class="text-slate-600 mt-2">Вместо десятков сложных конфигураций, рынок можно разделить на 3 базовые категории. Выберите карточку, чтобы узнать подробности.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <button onclick="selectCategory(0)" id="cat-btn-0" class="glass-panel p-6 rounded-xl shadow-sm text-left transition-all hover:shadow-md hover:-translate-y-1 border-2 border-transparent card-active">
+                    <div class="text-3xl mb-3">🌐</div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Виртуальный (Shared)</h3>
+                    <p class="text-slate-500 text-sm font-semibold">От $2 до $5 в месяц</p>
+                </button>
+                <button onclick="selectCategory(1)" id="cat-btn-1" class="glass-panel p-6 rounded-xl shadow-sm text-left transition-all hover:shadow-md hover:-translate-y-1 border-2 border-transparent">
+                    <div class="text-3xl mb-3">☁️</div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Облачные VPS/VDS</h3>
+                    <p class="text-slate-500 text-sm font-semibold">От $4 до $15 в месяц</p>
+                </button>
+                <button onclick="selectCategory(2)" id="cat-btn-2" class="glass-panel p-6 rounded-xl shadow-sm text-left transition-all hover:shadow-md hover:-translate-y-1 border-2 border-emerald-200 bg-emerald-50">
+                    <div class="text-3xl mb-3">🎓</div>
+                    <h3 class="text-xl font-bold text-emerald-800 mb-2">Сервер Ала-Тоо</h3>
+                    <p class="text-emerald-600 text-sm font-bold">~ $0 в месяц</p>
+                </button>
+            </div>
+
+            <div id="category-details" class="mt-6 glass-panel p-6 rounded-xl shadow-sm min-h-[150px]">
+                <h4 id="detail-title" class="text-xl font-bold text-blue-800 mb-3">Виртуальный (Shared) Хостинг</h4>
+                <p id="detail-desc" class="text-slate-700 leading-relaxed mb-4">Самый дешевый вариант для старта. Ваш сайт делит один физический сервер с сотнями других сайтов. Подходит для простых блогов, портфолио и сайтов-визиток с небольшой посещаемостью. Ресурсы (CPU, RAM) жестко ограничены.</p>
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded text-sm text-slate-700">
+                    <strong class="block text-blue-800 mb-1">Как сэкономить:</strong>
+                    <span id="detail-save">Покупайте подписку сразу на 1, 2 или 3 года. Провайдеры (например, Hostinger, Beget) дают скидку до 70-80% при долгосрочной оплате. Продление будет дороже, поэтому берите максимальный срок на старте.</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="cost-comparison">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2">2. Сравнение ежемесячных затрат</h2>
+                <p class="text-slate-600 mt-2">Наглядное сравнение средних минимальных цен на различные типы хостинга.</p>
+            </div>
+            <div class="chart-container">
+                <canvas id="barChart"></canvas>
+            </div>
+        </section>
+
+        <section id="cost-breakdown" class="bg-slate-100 rounded-2xl p-6 md:p-8 -mx-4 md:mx-0 shadow-inner">
+            <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">3. Из чего складывается цена?</h2>
+                    <p class="text-slate-600 mt-1">Понимание структуры затрат поможет вам не переплачивать за маркетинг.</p>
+                </div>
+                <div class="flex bg-white rounded-lg p-1 border shadow-sm self-start">
+                    <button onclick="updateDoughnut(0)" id="toggle-cloud" class="tab-btn active px-4 py-2 rounded-md text-sm font-medium transition-colors">Облачный Провайдер</button>
+                    <button onclick="updateDoughnut(1)" id="toggle-alatoo" class="px-4 py-2 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">Сервер Ала-Тоо</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <div class="chart-container shadow-none bg-transparent h-[300px]">
+                    <canvas id="doughnutChart"></canvas>
+                </div>
+                <div class="space-y-4">
+                    <div id="breakdown-text-cloud" class="block">
+                        <h4 class="text-lg font-bold text-slate-800 mb-2">Стандартная Облачная Модель</h4>
+                        <ul class="space-y-3">
+                            <li class="flex items-start">
+                                <span class="text-blue-500 mr-2 mt-1">▪</span>
+                                <div><strong class="text-slate-700">Оборудование (40%):</strong> Амортизация серверов, процессоры, диски NVMe.</div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-sky-400 mr-2 mt-1">▪</span>
+                                <div><strong class="text-slate-700">Инфраструктура (20%):</strong> Охлаждение дата-центров, электричество.</div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-slate-400 mr-2 mt-1">▪</span>
+                                <div><strong class="text-slate-700">Лицензии и Сеть (15%):</strong> Платные панели управления, IP-адреса, интернет-каналы.</div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-indigo-400 mr-2 mt-1">▪</span>
+                                <div><strong class="text-slate-700">Наценка и Поддержка (25%):</strong> Маркетинг, зарплаты саппорта, прибыль компании.</div>
+                            </li>
+                        </ul>
+                    </div>
+                    <div id="breakdown-text-alatoo" class="hidden">
+                        <h4 class="text-lg font-bold text-emerald-800 mb-2">Модель Университета Ала-Тоо</h4>
+                        <ul class="space-y-3">
+                            <li class="flex items-start">
+                                <span class="text-emerald-500 mr-2 mt-1">✓</span>
+                                <div><strong class="text-slate-700">Оборудование (0% для вас):</strong> Сервер уже куплен университетом для образовательных целей.</div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-emerald-500 mr-2 mt-1">✓</span>
+                                <div><strong class="text-slate-700">Инфраструктура (0% для вас):</strong> Электричество и помещение оплачиваются из бюджета кампуса.</div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-emerald-500 mr-2 mt-1">✓</span>
+                                <div><strong class="text-slate-700">Лицензии (Минимум):</strong> Использование Open Source решений (Linux, Docker) сводит затраты к нулю.</div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-emerald-500 mr-2 mt-1">✓</span>
+                                <div><strong class="text-slate-700">Наценка (0%):</strong> Коммерческая выгода отсутствует. Ваша единственная "инвестиция" — это ваше время на настройку.</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="savings-summary">
+            <h2 class="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-6">4. Главные секреты экономии (Чек-лист)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass-panel p-5 rounded-lg border-l-4 border-amber-400">
+                    <h3 class="font-bold text-slate-800 mb-2 flex items-center">⏱️ Способ оплаты</h3>
+                    <p class="text-sm text-slate-600">В облаке (AWS, Hetzner, DigitalOcean) используйте <strong>Pay-As-You-Go</strong>. Если вы разрабатываете проект, выключайте сервер на ночь и на выходные. Вы платите только за часы работы. Для постоянных проектов — покупайте <strong>Reserved Instances</strong> (резервирование на год), это дает до 50% скидки.</p>
+                </div>
+                <div class="glass-panel p-5 rounded-lg border-l-4 border-amber-400">
+                    <h3 class="font-bold text-slate-800 mb-2 flex items-center">🐧 Open Source</h3>
+                    <p class="text-sm text-slate-600">Не платите за лицензии ОС. Используйте <strong>Ubuntu/Debian</strong> вместо Windows Server. Откажитесь от платных панелей управления (cPanel) в пользу бесплатных (aaPanel, FastPanel) или учитесь работать через консоль (SSH).</p>
+                </div>
+                <div class="glass-panel p-5 rounded-lg border-l-4 border-amber-400">
+                    <h3 class="font-bold text-slate-800 mb-2 flex items-center">☁️ Serverless и Free Tiers</h3>
+                    <p class="text-sm text-slate-600">Для frontend-приложений (React, Vue) используйте <strong>бесплатные тарифы</strong> Vercel, Netlify, GitHub Pages. Бекенд можно разместить на бесплатных лимитах Render.com или Oracle Cloud (Always Free).</p>
+                </div>
+                <div class="glass-panel p-5 rounded-lg border-l-4 border-emerald-500 bg-emerald-50">
+                    <h3 class="font-bold text-emerald-800 mb-2 flex items-center">🎓 Использование ресурсов ВУЗа</h3>
+                    <p class="text-sm text-emerald-700"><strong>Самый недооцененный метод.</strong> Будучи студентом Ала-Тоо, запросите доступ к физическому серверу факультета. Вы получите мощное железо, выделенный IP и реальный опыт настройки серверов абсолютно бесплатно.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-8 text-center mt-12">
+        <p>© Интерактивное исследование затрат на ИТ-инфраструктуру. Создано для анализа.</p>
+    </footer>
+
+    <script>
+        const categoryData = [
+            {
+                title: "Виртуальный (Shared) Хостинг",
+                desc: "Самый дешевый вариант для старта. Ваш сайт делит один физический сервер с сотнями других сайтов. Подходит для простых блогов, портфолио и сайтов-визиток с небольшой посещаемостью. Ресурсы (CPU, RAM) жестко ограничены, при нагрузке сайт может «упасть».",
+                save: "Покупайте подписку сразу на 1, 2 или 3 года. Провайдеры (например, Hostinger, Beget) дают скидку до 70-80% при долгосрочной оплате. Продление будет дороже, поэтому берите максимальный срок на старте."
+            },
+            {
+                title: "Облачные VPS/VDS",
+                desc: "Виртуальный выделенный сервер. Идеально для сложных приложений, ботов, баз данных. Вы получаете гарантированные ресурсы (например, 1 Core, 2GB RAM) и полный root-доступ. Популярные провайдеры: Hetzner, DigitalOcean, AWS Lightsail.",
+                save: "Используйте почасовую оплату (Pay-as-you-go). Если это тестовый проект — удаляйте или останавливайте инстанс, когда не работаете с ним. Используйте тарифы ARM-архитектуры (они дешевле x86) и Spot-инстансы."
+            },
+            {
+                title: "Физический Сервер Ала-Тоо",
+                desc: "Собственный on-premise сервер (On-Premise), расположенный в инфраструктуре университета. Максимальная производительность, никаких ограничений от облачных провайдеров. Идеально подходит для дипломных проектов, тяжелых вычислений и запуска Docker-контейнеров.",
+                save: "Экономить не нужно — это уже бесплатно. Единственное, что от вас требуется — это знания Linux для самостоятельной настройки (web-сервер, база данных, безопасность), так как техподдержки хостера здесь нет."
+            }
+        ];
+
+        function selectCategory(index) {
+            for(let i=0; i<3; i++) {
+                document.getElementById('cat-btn-'+i).classList.remove('card-active', 'ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500');
+                if(i===2) document.getElementById('cat-btn-'+i).classList.add('bg-emerald-50'); 
+            }
+            
+            const btn = document.getElementById('cat-btn-'+index);
+            if(index === 2) {
+                btn.classList.add('ring-2', 'ring-emerald-500', 'bg-emerald-100');
+            } else {
+                btn.classList.add('card-active', 'ring-2', 'ring-blue-500', 'bg-blue-50');
+            }
+
+            const titleEl = document.getElementById('detail-title');
+            titleEl.textContent = categoryData[index].title;
+            if(index === 2) {
+                titleEl.className = "text-xl font-bold text-emerald-800 mb-3";
+            } else {
+                titleEl.className = "text-xl font-bold text-blue-800 mb-3";
+            }
+            
+            document.getElementById('detail-desc').textContent = categoryData[index].desc;
+            document.getElementById('detail-save').textContent = categoryData[index].save;
+        }
+
+        const barCtx = document.getElementById('barChart').getContext('2d');
+        new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Shared (Минимум)', 'Cloud VPS (Начальный)', 'Сервер Ала-Тоо'],
+                datasets: [{
+                    label: 'Ежемесячная стоимость ($)',
+                    data: [3, 6, 0.1],
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.7)',
+                        'rgba(99, 102, 241, 0.7)',
+                        'rgba(16, 185, 129, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgb(59, 130, 246)',
+                        'rgb(99, 102, 241)',
+                        'rgb(16, 185, 129)'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let val = context.raw;
+                                if(val === 0.1) return ' ~ $0 (Бесплатно)';
+                                return ' Средняя цена: $' + val;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Стоимость ($/мес)'
+                        }
+                    }
+                }
+            }
+        });
+
+        const cloudData = [40, 20, 15, 25];
+        const alatooData = [0, 0, 5, 0];
+        const doughnutLabels = ['Оборудование (CPU/SSD)', 'Инфраструктура (Свет/Датацентр)', 'Лицензии и Сеть (IP)', 'Наценка и Маркетинг'];
+
+        const doughCtx = document.getElementById('doughnutChart').getContext('2d');
+        let doughnutChart = new Chart(doughCtx, {
+            type: 'doughnut',
+            data: {
+                labels: doughnutLabels,
+                datasets: [{
+                    data: cloudData,
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(56, 189, 248, 0.8)',
+                        'rgba(148, 163, 184, 0.8)',
+                        'rgba(129, 140, 248, 0.8)'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        display: false 
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ' ' + context.label + ': ' + context.raw + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        function updateDoughnut(type) {
+            const btnCloud = document.getElementById('toggle-cloud');
+            const btnAlatoo = document.getElementById('toggle-alatoo');
+            const textCloud = document.getElementById('breakdown-text-cloud');
+            const textAlatoo = document.getElementById('breakdown-text-alatoo');
+
+            if (type === 0) {
+                btnCloud.classList.add('active', 'bg-blue-500', 'text-white');
+                btnCloud.classList.remove('text-slate-600', 'hover:bg-slate-50');
+                btnAlatoo.classList.remove('active', 'bg-blue-500', 'text-white');
+                btnAlatoo.classList.add('text-slate-600', 'hover:bg-slate-50');
+                
+                textCloud.classList.remove('hidden');
+                textAlatoo.classList.add('hidden');
+
+                doughnutChart.data.datasets[0].data = cloudData;
+                doughnutChart.data.datasets[0].backgroundColor = [
+                    'rgba(59, 130, 246, 0.8)', 'rgba(56, 189, 248, 0.8)', 'rgba(148, 163, 184, 0.8)', 'rgba(129, 140, 248, 0.8)'
+                ];
+            } else {
+                btnAlatoo.classList.add('active', 'bg-emerald-500', 'text-white');
+                btnAlatoo.classList.remove('text-slate-600', 'hover:bg-slate-50');
+                btnCloud.classList.remove('active', 'bg-blue-500', 'text-white');
+                btnCloud.classList.add('text-slate-600', 'hover:bg-slate-50');
+
+                textAlatoo.classList.remove('hidden');
+                textCloud.classList.add('hidden');
+
+                doughnutChart.data.datasets[0].data = alatooData;
+                doughnutChart.data.datasets[0].backgroundColor = [
+                    'rgba(209, 213, 219, 0.2)', 'rgba(209, 213, 219, 0.2)', 'rgba(16, 185, 129, 0.8)', 'rgba(209, 213, 219, 0.2)'
+                ];
+            }
+            doughnutChart.update();
+        }
+    </script>
+</body>
+</html>
